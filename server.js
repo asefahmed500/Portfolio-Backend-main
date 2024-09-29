@@ -32,20 +32,31 @@ client.connect().then(() => {
 
     // Define the route to handle form submissions
     app.post('/submitContactForm', async (req, res) => {
+        console.log('Received data:', req.body);
         const { name, email, message } = req.body;
-
-        // Insert the message into the collection
-        const result = await contactCollection.insertOne({
-            name,
-            email,
-     
-            message,
-            date: new Date()
-        });
-
-        console.log(`A document was inserted with the _id: ${result.insertedId}`);
-        res.status(200).json({ message: 'Message saved successfully!' });
+    
+        if (!name || !email || !message) {
+            console.log('Missing fields:', { name, email, message });
+            return res.status(400).json({ error: 'All fields are required' });
+        }
+    
+        try {
+            const result = await contactCollection.insertOne({
+                name,
+                email,
+                message,
+                date: new Date()
+            });
+    
+            console.log(`Inserted message with ID: ${result.insertedId}`);
+            res.status(200).json({ message: 'Message saved successfully!' });
+        } catch (error) {
+            console.error('Error saving message:', error);
+            res.status(500).json({ error: 'Failed to save message' });
+        }
     });
+    
+    
 
 
     // Send a ping to confirm a successful connection
