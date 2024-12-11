@@ -126,25 +126,25 @@ client.connect().then(() => {
             server_link,
             userEmail
         } = req.body;
-
+    
         // Validate ID
         if (!ObjectId.isValid(id)) {
             return res.status(400).json({ success: false, message: "Invalid project ID" });
         }
-
+    
         try {
             // Check if project exists
             const existingProject = await ProjectColletion.findOne({ _id: new ObjectId(id) });
-
+    
             if (!existingProject) {
                 return res.status(404).json({ success: false, message: "Project not found" });
             }
-
+    
             // Authorization check
             if (existingProject.userEmail !== userEmail) {
                 return res.status(403).json({ success: false, message: "Unauthorized access" });
             }
-
+    
             // Prepare update data
             const updatedData = {
                 ...(name && { name }),
@@ -156,13 +156,13 @@ client.connect().then(() => {
                 ...(server_link && { server_link }),
                 updatedAt: new Date()
             };
-
+    
             // Update project
             const result = await ProjectColletion.updateOne(
                 { _id: new ObjectId(id) },
                 { $set: updatedData }
             );
-
+    
             if (result.matchedCount > 0) {
                 return res.status(200).json({ success: true, message: "Project updated successfully" });
             } else {
@@ -173,7 +173,7 @@ client.connect().then(() => {
             res.status(500).json({ success: false, message: "Internal Server Error" });
         }
     });
-
+    
 
 
 
