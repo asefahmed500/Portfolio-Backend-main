@@ -33,15 +33,10 @@ client.connect().then(() => {
 
 
 
+    // Get all projects
     app.get('/projects', async (req, res) => {
-        const userEmail = req.query.userEmail; // Retrieve email from query parameter
-
-        if (!userEmail) {
-            return res.status(400).send({ message: "User email is required" });
-        }
-
         try {
-            const result = await ProjectColletion.find({ userEmail }).toArray(); // Filter projects by user email
+            const result = await ProjectColletion.find().toArray(); // No userEmail filtering
             res.send(result);
         } catch (error) {
             console.error("Error fetching projects:", error);
@@ -49,22 +44,12 @@ client.connect().then(() => {
         }
     });
 
-
-    // POST route to add a project associated with the user's email
+    // POST route to add a project
     app.post('/projects', async (req, res) => {
-        const {
-            name,
-            description,
-            github_link,
-            live_link,
-            image,
-            client_link,
-            server_link,
-            userEmail
-        } = req.body;
+        const { name, description, github_link, live_link, image, client_link, server_link } = req.body;
 
         // Validate required fields
-        if (!name || !description || !github_link || !live_link || !image || !userEmail) {
+        if (!name || !description || !github_link || !live_link || !image) {
             return res.status(400).send({ message: "Missing required fields" });
         }
 
@@ -74,9 +59,8 @@ client.connect().then(() => {
             github_link,
             live_link,
             image,
-            client_link: client_link || null, // Default to null if not provided
-            server_link: server_link || null, // Default to null if not provided
-            userEmail,
+            client_link: client_link || null, // Optional
+            server_link: server_link || null, // Optional
             createdAt: new Date()
         };
 
@@ -89,8 +73,7 @@ client.connect().then(() => {
         }
     });
 
-
-    // Fetch project details by ID
+    // Get project by ID
     app.get('/projects/:id', async (req, res) => {
         const { id } = req.params;
 
@@ -107,131 +90,69 @@ client.connect().then(() => {
 
             res.status(200).json({ success: true, data: project });
         } catch (error) {
-            console.error("Error fetching project:", error);
-            res.status(500).json({ success: false, message: "Internal Server Error" });
+            console.error(error);
+            res.status(500).json({ success: false, message: "Internal server error" });
         }
     });
 
-
-    // Update project
+    // PATCH route to update a project (no email logic)
     app.patch('/projects/:id', async (req, res) => {
         const { id } = req.params;
-        const {
+        const { name, description, github_link, live_link, image, client_link, server_link } = req.body;
+
+        const updatedData = {
             name,
             description,
             github_link,
             live_link,
             image,
-            client_link,
-            server_link,
-            userEmail
-        } = req.body;
-    
-        // Validate ID
-        if (!ObjectId.isValid(id)) {
-            return res.status(400).json({ success: false, message: "Invalid project ID" });
-        }
-    
+            client_link: client_link || null,
+            server_link: server_link || null,
+        };
+
         try {
-            // Check if project exists
-            const existingProject = await ProjectColletion.findOne({ _id: new ObjectId(id) });
-    
-            if (!existingProject) {
-                return res.status(404).json({ success: false, message: "Project not found" });
-            }
-    
-            // Authorization check
-            if (existingProject.userEmail !== userEmail) {
-                return res.status(403).json({ success: false, message: "Unauthorized access" });
-            }
-    
-            // Prepare update data
-            const updatedData = {
-                ...(name && { name }),
-                ...(description && { description }),
-                ...(github_link && { github_link }),
-                ...(live_link && { live_link }),
-                ...(image && { image }),
-                ...(client_link && { client_link }),
-                ...(server_link && { server_link }),
-                updatedAt: new Date()
-            };
-    
-            // Update project
             const result = await ProjectColletion.updateOne(
                 { _id: new ObjectId(id) },
                 { $set: updatedData }
             );
-    
-            if (result.matchedCount > 0) {
-                return res.status(200).json({ success: true, message: "Project updated successfully" });
-            } else {
-                return res.status(404).json({ success: false, message: "Project not found" });
+
+            if (result.matchedCount === 0) {
+                return res.status(404).json({ message: "Project not found" });
             }
+
+            res.status(200).json({ message: "Project updated successfully" });
         } catch (error) {
             console.error("Error updating project:", error);
-            res.status(500).json({ success: false, message: "Internal Server Error" });
+            res.status(500).json({ message: "Error updating project" });
         }
     });
-    
 
-
-
-
+    // DELETE route to delete a project
     app.delete('/projects/:id', async (req, res) => {
         const { id } = req.params;
-        console.log(id); // Log the id to make sure it's being passed correctly
-        const query = { _id: new ObjectId(id) };  // Create the query with ObjectId
-        console.log(query); // Log the query to debug
 
         try {
-            const result = await ProjectColletion.deleteOne(query);
-            if (result.deletedCount > 0) {
-                res.status(200).send({ message: "Project deleted successfully" });
-            } else {
-                res.status(404).send({ message: "Project not found" });
+            const result = await ProjectColletion.deleteOne({ _id: new ObjectId(id) });
+
+            if (result.deletedCount === 0) {
+                return res.status(404).json({ message: "Project not found" });
             }
+
+            res.status(200).json({ message: "Project deleted successfully" });
         } catch (error) {
             console.error("Error deleting project:", error);
-            res.status(500).send({ message: "Internal Server Error" });
+            res.status(500).json({ message: "Error deleting project" });
         }
     });
-
-    // Define the route to handle form submissions
-    app.post('/submitContactForm', async (req, res) => {
-        console.log('Received data:', req.body);
-        const { name, email, message } = req.body;
-
-        if (!name || !email || !message) {
-            console.log('Missing fields:', { name, email, message });
-            return res.status(400).json({ error: 'All fields are required' });
-        }
-
-        try {
-            const result = await contactCollection.insertOne({
-                name,
-                email,
-                message,
-                date: new Date()
-            });
-
-            console.log(`Inserted message with ID: ${result.insertedId}`);
-            res.status(200).json({ message: 'Message saved successfully!' });
-        } catch (error) {
-            console.error('Error saving message:', error);
-            res.status(500).json({ error: 'Failed to save message' });
-        }
-    });
+});
 
 
-
-
-    // Send a ping to confirm a successful connection
-    client.db("admin").command({ ping: 1 }).then(() => {
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
-    }).catch(console.dir);
-
+// Send a ping to confirm a successful connection
+client.db("admin").command({ ping: 1 }).then(() => {
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
 }).catch(console.dir);
+
+
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
