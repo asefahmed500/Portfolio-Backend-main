@@ -9,9 +9,27 @@ const morgan = require('morgan'); // Request logging
 const app = express();
 const port = process.env.PORT || 5001;
 
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:5174",
+  "https://asefahmed.netlify.app",
+  "https://asef-ahmed.onrender.com"
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: "GET,POST,PATCH,DELETE",
+  allowedHeaders: "Content-Type,Authorization"
+}));
+
 // Middleware
 app.use(helmet()); // Secure HTTP headers
-app.use(cors());
 app.use(express.json());
 app.use(morgan('dev')); // Log HTTP requests
 
